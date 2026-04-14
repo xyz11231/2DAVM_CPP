@@ -122,6 +122,9 @@ bool AVM2D::init() {
     setF("proj_lw",(float)binData_.proj_shapes[2].width); setF("proj_lh",(float)binData_.proj_shapes[2].height);
     setF("proj_rw",(float)binData_.proj_shapes[3].width); setF("proj_rh",(float)binData_.proj_shapes[3].height);
 
+    // 8. 羽化融合参数
+    setF("feather_w", 30.0f);  // 缝隙羽化带宽度（像素）
+
     initialized_ = true;
     std::cout << "[AVM2D] 初始化完成 (" << binData_.total_w << "×" << binData_.total_h << ")\n";
     return true;
