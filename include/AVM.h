@@ -14,6 +14,7 @@ struct SourceTextures {
     GLuint textures[4] = {};  // 纹理 ID，顺序: front/back/left/right
     int width  = 0;           // 源帧宽度（4 路相同）
     int height = 0;           // 源帧高度
+    float gains[4] = {1,1,1,1}; // 亮度校正因子（光照平衡）
 };
 
 /**

@@ -24,6 +24,7 @@
 #include "VideoReader.h"
 #include "SharedTextureManager.h"
 #include "ScreenCompositor.h"
+#include "LuminanceBalancer.h"
 
 // ─── 配置 ───
 struct Config {
@@ -42,10 +43,16 @@ struct Config {
 
 // ─── GLFW 回调 ───
 static bool g_quit = false, g_paused = false;
+static LuminanceBalancer* g_balancer = nullptr;  // 用于键盘回调
+
 static void keyCb(GLFWwindow*, int key, int, int act, int) {
     if (act != GLFW_PRESS) return;
     if (key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q) g_quit = true;
     if (key == GLFW_KEY_SPACE) g_paused = !g_paused;
+    if (key == GLFW_KEY_L && g_balancer) {
+        g_balancer->toggle();
+        std::cout << "[光照平衡] " << (g_balancer->isEnabled() ? "已开启" : "已关闭") << "\n";
+    }
 }
 
 // ═══════════════ main ═══════════════
@@ -108,11 +115,15 @@ int main(int /*argc*/, char** /*argv*/) {
     SensorData sensorData;
     TransparentChassis transparentChassis;
 
+    // 6. 光照平衡
+    LuminanceBalancer balancer;
+    g_balancer = &balancer;
+
     using Clock = std::chrono::steady_clock;
     auto lastFps = Clock::now();
     int frameCount = 0;
 
-    std::cout << "[Main] GPU 渲染就绪. ESC/Q退出 Space暂停\n";
+    std::cout << "[Main] GPU 渲染就绪. ESC/Q退出 Space暂停 L光照平衡\n";
 
     // ═══ 主循环 ═══
     while (!glfwWindowShouldClose(window) && !g_quit) {
@@ -132,10 +143,14 @@ int main(int /*argc*/, char** /*argv*/) {
 
         // ── 渲染流程 ──
 
-        // 1) 统一上传源帧纹理（4路共享，上传一次）
-        SourceTextures src = texMgr.upload(frames);
+        // 1) 光照平衡计算
+        balancer.update(frames);
 
-        // 2) AVM 渲染到各自的 FBO
+        // 2) 统一上传源帧纹理（4路共享，上传一次）
+        SourceTextures src = texMgr.upload(frames);
+        std::copy(balancer.gains(), balancer.gains() + 4, src.gains);
+
+        // 3) AVM 渲染到各自的 FBO
         avm2d->render(src, sensorData);
         // 未来: avm3d->render(src, sensorData);
 

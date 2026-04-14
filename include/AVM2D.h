@@ -54,6 +54,7 @@ private:
 
     bool initialized_ = false;
     bool srcUniformSet_ = false;
+    GLint exposureLoc_ = -1;
 
     // 内部方法
     void initQuad();

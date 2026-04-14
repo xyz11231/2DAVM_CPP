@@ -125,6 +125,10 @@ bool AVM2D::init() {
     // 8. 羽化融合参数
     setF("feather_w", 30.0f);  // 缝隙羽化带宽度（像素）
 
+    // 9. 光照平衡
+    exposureLoc_ = glGetUniformLocation(program_, "exposure");
+    glUniform4f(exposureLoc_, 1.f, 1.f, 1.f, 1.f);
+
     initialized_ = true;
     std::cout << "[AVM2D] 初始化完成 (" << binData_.total_w << "×" << binData_.total_h << ")\n";
     return true;
@@ -146,6 +150,9 @@ bool AVM2D::render(const SourceTextures& src, const SensorData& /*sensorData*/) 
         setF("src_h", (float)src.height);
         srcUniformSet_ = true;
     }
+
+    // 更新光照平衡增益
+    glUniform4f(exposureLoc_, src.gains[0], src.gains[1], src.gains[2], src.gains[3]);
 
     // GPU 渲染
     glClearColor(0, 0, 0, 1);

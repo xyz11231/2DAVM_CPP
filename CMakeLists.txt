@@ -27,6 +27,7 @@ add_executable(surround_view
     src/SharedTextureManager.cpp
     src/ScreenCompositor.cpp
     src/TransparentChassis.cpp
+    src/LuminanceBalancer.cpp
     src/main.cpp
 )
 
