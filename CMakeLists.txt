@@ -23,6 +23,10 @@ include_directories(
 add_executable(surround_view
     src/StitchBinLoader.cpp
     src/VideoReader.cpp
+    src/AVM2D.cpp
+    src/SharedTextureManager.cpp
+    src/ScreenCompositor.cpp
+    src/TransparentChassis.cpp
     src/main.cpp
 )
 
