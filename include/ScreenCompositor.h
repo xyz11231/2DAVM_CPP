@@ -1,5 +1,5 @@
 #pragma once
-#include <GL/glew.h>
+#include "PlatformGL.h"
 
 /**
  * Viewport — 屏幕区域定义

@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <GL/glew.h>
+#include "PlatformGL.h"
 #include "SensorData.h"
 #include <opencv2/opencv.hpp>
 

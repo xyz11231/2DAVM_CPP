@@ -1,4 +1,5 @@
 #include "ScreenCompositor.h"
+#include "PlatformGL.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -40,7 +41,7 @@ static GLuint linkProgram_(GLuint vs, GLuint fs) {
 // 全屏四边形（V 坐标翻转，修正 FBO 纹理 Y 轴方向）
 static const float kQuad[] = {
     -1, 1, 0, 1,   -1,-1, 0, 0,   1,-1, 1, 0,   1, 1, 1, 1 };
-static const unsigned kIdx[] = { 0,1,2, 0,2,3 };
+static const GLindex kIdx[] = { 0,1,2, 0,2,3 };
 
 // ═══════════════════════════════════════════════
 
@@ -49,7 +50,7 @@ ScreenCompositor::~ScreenCompositor() {
 }
 
 bool ScreenCompositor::init() {
-    std::string shaderDir = "/home/ld/new_project/2DAVM_CPP/shaders/";
+    std::string shaderDir = SHADER_DIR;
     std::string vsSrc = readFile_(shaderDir + "compositor_vertex.glsl");
     std::string fsSrc = readFile_(shaderDir + "compositor_fragment.glsl");
     if (vsSrc.empty() || fsSrc.empty()) {
@@ -101,7 +102,7 @@ void ScreenCompositor::draw(GLuint texture, const Viewport& vp) {
     glBindTexture(GL_TEXTURE_2D, texture);
 
     glBindVertexArray(quadVAO_);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_INDEX_TYPE, 0);
 }
 
 void ScreenCompositor::destroy() {

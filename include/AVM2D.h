@@ -1,7 +1,7 @@
 #pragma once
 #include "AVM.h"
 #include "StitchBinLoader.h"
-#include <GL/glew.h>
+#include "PlatformGL.h"
 #include <array>
 
 /**

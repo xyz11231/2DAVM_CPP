@@ -1,4 +1,6 @@
-#version 330 core
+#version 300 es
+precision highp float;
+precision highp sampler2D;
 in  vec2 TexCoord;
 out vec4 FragColor;
 
@@ -16,13 +18,54 @@ uniform float proj_lw, proj_lh;
 uniform float proj_rw, proj_rh;
 uniform float feather_w;  // 羽化带宽度（像素）
 uniform vec4  exposure;   // 光照平衡增益 (front/back/left/right)
-uniform int   inputYUV;   // YUV 输入标志: 0=RGB, 1=YUV422 (桌面始终为0)
+
+// YUV 输入标志: 0=RGB, 1=YUV422(UYVY)
+uniform int   inputYUV;
+
+// ── YUV→RGB 转换 ──
+// UYVY 编码: 每 4 字节 = [U, Y0, V, Y1]
+// 纹理按 half-width RGBA 上传: 一个 RGBA 像素 = (U, Y0, V, Y1)
+vec3 yuvToRgb(float y, float u, float v) {
+    // BT.601 标准
+    float r = y + 1.402 * (v - 0.5);
+    float g = y - 0.344136 * (u - 0.5) - 0.714136 * (v - 0.5);
+    float b = y + 1.772 * (u - 0.5);
+    return clamp(vec3(r, g, b), 0.0, 1.0);
+}
+
+vec3 sampleYUV(sampler2D src, vec2 uv) {
+    // UYVY 纹理以 half-width RGBA 上传
+    // 原始宽度 = 纹理宽度 * 2
+    // uv.x 对应原始像素列号
+    float texW = src_w * 0.5;  // 纹理实际宽度 (half)
+    float pixelX = uv.x * src_w;  // 原始像素 x
+    float macroX = floor(pixelX * 0.5);  // 宏像素索引
+    float sampleU = (macroX + 0.5) / texW;
+
+    vec4 yuv_data = texture(src, vec2(sampleU, uv.y));
+    float U  = yuv_data.r;
+    float Y0 = yuv_data.g;
+    float V  = yuv_data.b;
+    float Y1 = yuv_data.a;
+
+    // 根据奇偶选 Y
+    float isOdd = fract(pixelX) > 0.25 ? 1.0 : 0.0;  // 近似判断
+    float Y = mix(Y0, Y1, isOdd);
+
+    return yuvToRgb(Y, U, V);
+}
 
 vec3 remapSample(sampler2D src, sampler2D rmap, vec2 ruv, float gain) {
     vec2 px = texture(rmap, ruv).rg;
     if (px.x < 0.0 || px.y < 0.0) return vec3(0.0);
     vec2 uv = vec2(px.x / src_w, px.y / src_h);
-    return texture(src, uv).rgb * gain;
+    vec3 color;
+    if (inputYUV == 1) {
+        color = sampleYUV(src, uv);
+    } else {
+        color = texture(src, uv).rgb;
+    }
+    return color * gain;
 }
 
 // 带光照校正的便捷采样

@@ -1,8 +1,12 @@
 #pragma once
-#include <GL/glew.h>
+#include "PlatformGL.h"
 #include <opencv2/core.hpp>
 #include <array>
 #include "AVM.h"
+
+#ifdef QNX_PLATFORM
+#include "QnxStreamAdapter.h"
+#endif
 
 /**
  * SharedTextureManager — 4 路源帧纹理统一管理
@@ -26,11 +30,25 @@ public:
     void init();
 
     /**
-     * 上传 4 路摄像头帧到 GPU
+     * 上传 4 路摄像头帧到 GPU (桌面模式: BGR cv::Mat)
      * @param frames  4路输入帧 (BGR, CV_8UC3)，顺序: front/back/left/right
      * @return 包含纹理 ID 和尺寸的 SourceTextures
      */
     SourceTextures upload(cv::Mat frames[4]);
+
+#ifdef QNX_PLATFORM
+    /**
+     * 上传 4 路摄像头帧到 GPU (QNX 模式: YUV422 UYVY)
+     *
+     * UYVY 数据以 half-width RGBA 纹理上传:
+     *   实际纹理宽度 = 原始宽度/2, 格式 = GL_RGBA
+     *   每个 RGBA 像素 = (U, Y0, V, Y1)
+     *
+     * @param frames  4路 CameraFrame (YUV422 UYVY)
+     * @return 包含纹理 ID 和原始尺寸的 SourceTextures
+     */
+    SourceTextures uploadYUV(const CameraFrame frames[4]);
+#endif
 
     /**
      * 释放所有纹理资源

@@ -1,5 +1,7 @@
 #include "AVM2D.h"
+#ifndef QNX_PLATFORM
 #include <GLFW/glfw3.h>
+#endif
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
@@ -58,7 +60,7 @@ static GLuint makeTex(int w, int h, GLint ifmt, GLenum fmt, GLenum type,
 // 全屏四边形顶点数据
 static const float kQuad[] = {
     -1, 1, 0, 0,   -1,-1, 0, 1,   1,-1, 1, 1,   1, 1, 1, 0 };
-static const unsigned kIdx[] = { 0,1,2, 0,2,3 };
+static const GLindex kIdx[] = { 0,1,2, 0,2,3 };
 
 // ═══════════════════════════════════════════════
 //  AVM2D 实现
@@ -81,7 +83,7 @@ bool AVM2D::init() {
     }
 
     // 2. 编译着色器
-    std::string shaderDir = "/home/ld/new_project/2DAVM_CPP/shaders/";
+    std::string shaderDir = SHADER_DIR;
     std::string vsSrc = readFile(shaderDir + "vertex.glsl");
     std::string fsSrc = readFile(shaderDir + "fragment.glsl");
     if (vsSrc.empty() || fsSrc.empty()) {
@@ -123,11 +125,18 @@ bool AVM2D::init() {
     setF("proj_rw",(float)binData_.proj_shapes[3].width); setF("proj_rh",(float)binData_.proj_shapes[3].height);
 
     // 8. 羽化融合参数
-    setF("feather_w", 30.0f);  // 缝隙羽化带宽度（像素）
+    setF("feather_w", 20.0f);  // 缝隙羽化带宽度（像素）
 
     // 9. 光照平衡
     exposureLoc_ = glGetUniformLocation(program_, "exposure");
     glUniform4f(exposureLoc_, 1.f, 1.f, 1.f, 1.f);
+
+    // 10. YUV 输入标志 (QNX 使用 YUV422 摄像头输入)
+#ifdef QNX_PLATFORM
+    glUniform1i(glGetUniformLocation(program_, "inputYUV"), 1);
+#else
+    glUniform1i(glGetUniformLocation(program_, "inputYUV"), 0);
+#endif
 
     initialized_ = true;
     std::cout << "[AVM2D] 初始化完成 (" << binData_.total_w << "×" << binData_.total_h << ")\n";
@@ -161,7 +170,7 @@ bool AVM2D::render(const SourceTextures& src, const SensorData& /*sensorData*/) 
 
     // 绘制全屏四边形
     glBindVertexArray(quadVAO_);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 6, GL_INDEX_TYPE, 0);
 
     // ── 解绑 FBO ──
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -174,11 +183,20 @@ bool AVM2D::readPixels(cv::Mat& output) {
 
     int w = binData_.total_w;
     int h = binData_.total_h;
-    output.create(h, w, CV_8UC3);
 
     // 绑定内部 FBO 读取
     glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+
+#ifdef QNX_PLATFORM
+    // ES 不支持 GL_BGR，用 GL_RGBA 读回后转换
+    cv::Mat rgba(h, w, CV_8UC4);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data);
+    cv::cvtColor(rgba, output, cv::COLOR_RGBA2BGR);
+#else
+    output.create(h, w, CV_8UC3);
     glReadPixels(0, 0, w, h, GL_BGR, GL_UNSIGNED_BYTE, output.data);
+#endif
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // OpenGL 坐标系 Y 轴向上，需要翻转
