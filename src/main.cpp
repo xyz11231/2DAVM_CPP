@@ -66,6 +66,7 @@ struct Config {
 // ─── 全局状态 ───
 static bool g_quit = false, g_paused = false;
 static LuminanceBalancer* g_balancer = nullptr;
+static AVM* g_avm = nullptr;  // 用于键盘回调中切换透明底盘
 
 // ─── 键盘回调 ───
 static void onKey(int key, int action) {
@@ -81,6 +82,10 @@ static void onKey(int key, int action) {
     if (key == GLFW_KEY_L && g_balancer) {
         g_balancer->toggle();
         std::cout << "[光照平衡] " << (g_balancer->isEnabled() ? "已开启" : "已关闭") << "\n";
+    }
+    if (key == GLFW_KEY_T && g_avm) {
+        g_avm->toggleTransparentChassis();
+        std::cout << "[透明底盘] " << (g_avm->isTransparentChassisEnabled() ? "已开启" : "已关闭") << "\n";
     }
 #endif
 }
@@ -108,6 +113,7 @@ int main(int /*argc*/, char** /*argv*/) {
         return 1;
     }
     QnxVehicleAdapter vehicleAdapter;
+    vehicleAdapter.init();
 #endif
 
     // ── 2. 创建窗口和 GL 上下文 ──
@@ -146,7 +152,9 @@ int main(int /*argc*/, char** /*argv*/) {
 
     // ── 4. 传感器数据和附加模块 ──
     SensorData sensorData;
-    TransparentChassis transparentChassis;
+
+    // 全局指针（供键盘回调使用）
+    g_avm = avm2d.get();
 
     // 光照平衡
     LuminanceBalancer balancer;
@@ -156,7 +164,7 @@ int main(int /*argc*/, char** /*argv*/) {
     auto lastFps = Clock::now();
     int frameCount = 0;
 
-    std::cout << "[Main] GPU 渲染就绪. ESC/Q退出 Space暂停 L光照平衡\n";
+    std::cout << "[Main] GPU 渲染就绪. ESC/Q退出 Space暂停 L光照平衡 T透明底盘\n";
 
     // ═══ 主循环 ═══
     while (!window.shouldClose() && !g_quit) {
@@ -222,6 +230,7 @@ int main(int /*argc*/, char** /*argv*/) {
     }
 
     // 清理
+    g_avm = nullptr;
     avm2d->destroy();
     avm2d.reset();
     texMgr.destroy();
@@ -230,6 +239,7 @@ int main(int /*argc*/, char** /*argv*/) {
 
 #ifdef QNX_PLATFORM
     streamAdapter.destroy();
+    vehicleAdapter.destroy();
 #endif
 
     std::cout << "[Main] 退出\n";

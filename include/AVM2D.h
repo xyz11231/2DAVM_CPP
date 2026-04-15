@@ -2,6 +2,7 @@
 #include "AVM.h"
 #include "StitchBinLoader.h"
 #include "PlatformGL.h"
+#include "TransparentChassis.h"
 #include <array>
 
 /**
@@ -13,7 +14,8 @@
  * 渲染流程：
  *   1. 接收外部统一上传的 4 路源帧纹理（SourceTextures）
  *   2. 在内部 FBO 上完成全部渲染
- *   3. 通过 getOutputTexture() 暴露结果纹理
+ *   3. 如果透明底盘开启，后处理生成透明底盘效果
+ *   4. 通过 getOutputTexture() 暴露结果纹理
  *
  * 纹理布局 (9 个静态 + 4 个外部)：
  *   外部:  srcFront/Back/Left/Right      (由 SharedTextureManager 管理)
@@ -29,7 +31,13 @@ public:
     bool init() override;
     bool render(const SourceTextures& src,
                 const SensorData& sensorData) override;
-    GLuint getOutputTexture() const override { return fboTex_; }
+
+    GLuint getOutputTexture() const override {
+        if (tcEnabled_ && tc_.isInitialized())
+            return tc_.getOutputTexture();
+        return fboTex_;
+    }
+
     bool readPixels(cv::Mat& output) override;
     void destroy() override;
 
@@ -56,9 +64,13 @@ private:
     bool srcUniformSet_ = false;
     GLint exposureLoc_ = -1;
 
+    // 透明底盘 (GPU 后处理)
+    mutable TransparentChassis tc_;
+
     // 内部方法
     void initQuad();
     void initFBO();
     void uploadStaticTextures();
     void bindTextures(const GLuint srcTextures[4]);
 };
+

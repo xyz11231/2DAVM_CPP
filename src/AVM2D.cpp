@@ -138,12 +138,20 @@ bool AVM2D::init() {
     glUniform1i(glGetUniformLocation(program_, "inputYUV"), 0);
 #endif
 
+    // 11. 初始化透明底盘
+    if (!tc_.init(binData_.total_w, binData_.total_h,
+                  binData_.xl_px, binData_.xr_px,
+                  binData_.yt_px, binData_.yb_px)) {
+        std::cerr << "[AVM2D] 透明底盘初始化失败（非致命，继续运行）\n";
+        // TC 初始化失败不影响主功能
+    }
+
     initialized_ = true;
     std::cout << "[AVM2D] 初始化完成 (" << binData_.total_w << "×" << binData_.total_h << ")\n";
     return true;
 }
 
-bool AVM2D::render(const SourceTextures& src, const SensorData& /*sensorData*/) {
+bool AVM2D::render(const SourceTextures& src, const SensorData& sensorData) {
     if (!initialized_) return false;
 
     // ── 绑定内部 FBO（离屏渲染）──
@@ -174,6 +182,12 @@ bool AVM2D::render(const SourceTextures& src, const SensorData& /*sensorData*/) 
 
     // ── 解绑 FBO ──
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // ── 透明底盘后处理 ──
+    if (tcEnabled_ && tc_.isInitialized()) {
+        tc_.setEnabled(true);
+        tc_.update(fboTex_, sensorData);
+    }
 
     return true;
 }
@@ -206,6 +220,9 @@ bool AVM2D::readPixels(cv::Mat& output) {
 
 void AVM2D::destroy() {
     if (!initialized_) return;
+
+    // 先释放透明底盘
+    tc_.destroy();
 
     for (auto& t : remapTex_)  glDeleteTextures(1, &t);
     for (auto& t : weightTex_) glDeleteTextures(1, &t);

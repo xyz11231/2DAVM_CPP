@@ -14,6 +14,10 @@
 class QnxVehicleAdapter {
 public:
     QnxVehicleAdapter() = default;
+    ~QnxVehicleAdapter();
+
+    bool init();
+    void destroy();
 
     /**
      * 从 VDB 获取最新车辆数据并映射到 SensorData
@@ -32,6 +36,10 @@ public:
      * @return 0=无, 1=左, 2=右, 3=双闪
      */
     int getTurnSignal() const;
+
+private:
+    struct Impl;
+    Impl* pImpl_ = nullptr;
 };
 
 #endif // QNX_PLATFORM

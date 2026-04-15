@@ -75,6 +75,18 @@ public:
     /** 获取鸟瞰图高度 */
     virtual int getHeight() const = 0;
 
+    // ─── 透明底盘控制 ───
+
+    /** 开启/关闭透明底盘 */
+    void setTransparentChassisEnabled(bool on) { tcEnabled_ = on; }
+
+    /** 是否已开启透明底盘 */
+    bool isTransparentChassisEnabled() const   { return tcEnabled_; }
+
+    /** 切换透明底盘 */
+    void toggleTransparentChassis()            { tcEnabled_ = !tcEnabled_; }
+
 protected:
     std::string binPath_;
+    bool tcEnabled_ = false;  // 透明底盘开关
 };
